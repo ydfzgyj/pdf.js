@@ -12,6 +12,8 @@ require('./domstubs.js');
 
 // Run `gulp dist` to generate 'pdfjs-dist' npm package files.
 var pdfjsLib = require('../../build/dist');
+// Force generate base64 string
+pdfjsLib.PDFJS.disableCreateObjectURL = true
 
 // Loading file from file system into typed array
 var pdfPath = process.argv[2] || '../../web/compressed.tracemonkey-pldi-09.pdf';
@@ -39,15 +41,12 @@ function writeToFile(svgdump, pageNum) {
 function getFileNameFromPath(path) {
   var index = path.lastIndexOf('/');
   var extIndex = path.lastIndexOf('.');
-  return path.substring(index , extIndex);
+  return path.substring(index, extIndex);
 }
 
 // Will be using promises to load document, pages and misc data instead of
 // callback.
-pdfjsLib.getDocument({
-  data: data,
-  disableNativeImageDecoder: true,
-}).then(function (doc) {
+pdfjsLib.getDocument(data).then(function (doc) {
   var numPages = doc.numPages;
   console.log('# Document Loaded');
   console.log('Number of Pages: ' + numPages);
@@ -62,7 +61,7 @@ pdfjsLib.getDocument({
       console.log();
 
       return page.getOperatorList().then(function (opList) {
-        var svgGfx = new pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
+        var svgGfx = new pdfjsLib.SVGGraphics(page.commonObjs, page.objs, true);
         svgGfx.embedFonts = true;
         return svgGfx.getSVG(opList, viewport).then(function (svg) {
           var svgDump = svg.toString();

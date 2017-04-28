@@ -147,3 +147,18 @@ global.document = {
     return [];
   }
 };
+
+function Image() {}
+
+Image.prototype.__defineSetter__('src', function (val) {
+  this.source = val;
+  if (this.onload) {
+    this.onload();
+  }
+});
+
+Image.prototype.__defineGetter__('src', function () {
+  return this.source;
+});
+
+global.Image = Image;
