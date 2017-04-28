@@ -689,14 +689,16 @@ SVGGraphics = (function SVGGraphicsClosure() {
           x += -glyph * fontSize * 0.001;
           continue;
         }
-        current.xcoords.push(current.x + x * textHScale);
+        var character = glyph.fontChar;
+        if (character !== ' ') {
+          current.tspan.textContent += character;
+          current.xcoords.push(current.x + x * textHScale);
+        }
 
         var width = glyph.width;
-        var character = glyph.fontChar;
-        var charWidth = width * widthAdvanceScale + charSpacing * fontDirection;
+        var spacing = (glyph.isSpace ? wordSpacing : 0) + charSpacing;
+        var charWidth = width * widthAdvanceScale + spacing * fontDirection;
         x += charWidth;
-
-        current.tspan.textContent += character;
       }
       if (vertical) {
         current.y -= x * textHScale;
