@@ -64,6 +64,7 @@ var isNum = sharedUtil.isNum;
 var isString = sharedUtil.isString;
 var getLookupTableFactory = sharedUtil.getLookupTableFactory;
 var warn = sharedUtil.warn;
+var isNodeJS = sharedUtil.isNodeJS;
 var Dict = corePrimitives.Dict;
 var Name = corePrimitives.Name;
 var isEOF = corePrimitives.isEOF;
@@ -161,6 +162,9 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
    */
   NativeImageDecoder.isDecodable =
       function NativeImageDecoder_isDecodable(image, xref, res) {
+    if (isNodeJS()) {
+      return false;
+    }
     var dict = image.dict;
     if (dict.has('DecodeParms') || dict.has('DP')) {
       return false;
