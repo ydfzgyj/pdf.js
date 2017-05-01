@@ -67,11 +67,11 @@ function configure(PDFJS) {
 }
 
 var DefaultExternalServices = {
-  updateFindControlState: function (data) {},
-  initPassiveLoading: function (callbacks) {},
-  fallback: function (data, callback) {},
-  reportTelemetry: function (data) {},
-  createDownloadManager: function () {
+  updateFindControlState(data) {},
+  initPassiveLoading(callbacks) {},
+  fallback(data, callback) {},
+  reportTelemetry(data) {},
+  createDownloadManager() {
     throw new Error('Not implemented: createDownloadManager');
   },
   createPreferences() {
@@ -181,7 +181,7 @@ var PDFViewerApplication = {
   /**
    * @private
    */
-  _readPreferences: function () {
+  _readPreferences() {
     var { preferences, viewerPrefs, } = this;
 
     return Promise.all([
@@ -257,20 +257,20 @@ var PDFViewerApplication = {
   /**
    * @private
    */
-  _initializeViewerComponents: function () {
+  _initializeViewerComponents() {
     var self = this;
     var appConfig = this.appConfig;
 
     return new Promise((resolve, reject) => {
       var eventBus = appConfig.eventBus || getGlobalEventBus();
-      self.eventBus = eventBus;
+      this.eventBus = eventBus;
 
       var pdfRenderingQueue = new PDFRenderingQueue();
       pdfRenderingQueue.onIdle = self.cleanup.bind(self);
       self.pdfRenderingQueue = pdfRenderingQueue;
 
       var pdfLinkService = new PDFLinkService({
-        eventBus: eventBus
+        eventBus,
       });
       self.pdfLinkService = pdfLinkService;
 
@@ -280,12 +280,12 @@ var PDFViewerApplication = {
       var container = appConfig.mainContainer;
       var viewer = appConfig.viewerContainer;
       self.pdfViewer = new PDFViewer({
-        container: container,
-        viewer: viewer,
-        eventBus: eventBus,
+        container,
+        viewer,
+        eventBus,
         renderingQueue: pdfRenderingQueue,
         linkService: pdfLinkService,
-        downloadManager: downloadManager,
+        downloadManager,
         renderer: self.viewerPrefs['renderer'],
         enhanceTextSelection: self.viewerPrefs['enhanceTextSelection'],
         renderInteractiveForms: self.viewerPrefs['renderInteractiveForms'],
@@ -304,7 +304,7 @@ var PDFViewerApplication = {
 
       self.pdfHistory = new PDFHistory({
         linkService: pdfLinkService,
-        eventBus: eventBus,
+        eventBus,
       });
       pdfLinkService.setHistory(self.pdfHistory);
 
@@ -353,10 +353,10 @@ var PDFViewerApplication = {
 
       if (self.supportsFullscreen) {
         self.pdfPresentationMode = new PDFPresentationMode({
-          container: container,
-          viewer: viewer,
+          container,
+          viewer,
           pdfViewer: self.pdfViewer,
-          eventBus: eventBus,
+          eventBus,
           contextMenuItems: appConfig.fullscreen
         });
       }
@@ -365,14 +365,14 @@ var PDFViewerApplication = {
 
       self.pdfOutlineViewer = new PDFOutlineViewer({
         container: appConfig.sidebar.outlineView,
-        eventBus: eventBus,
+        eventBus,
         linkService: pdfLinkService,
       });
 
       self.pdfAttachmentViewer = new PDFAttachmentViewer({
         container: appConfig.sidebar.attachmentsView,
-        eventBus: eventBus,
-        downloadManager: downloadManager,
+        eventBus,
+        downloadManager,
       });
 
       // FIXME better PDFSidebar constructor parameters
@@ -482,31 +482,31 @@ var PDFViewerApplication = {
     if (typeof PDFJSDev !== 'undefined' &&
         PDFJSDev.test('FIREFOX || MOZCENTRAL || CHROME')) {
       this.externalServices.initPassiveLoading({
-        onOpenWithTransport: function (url, length, transport) {
-          PDFViewerApplication.open(url, {range: transport});
+        onOpenWithTransport(url, length, transport) {
+          PDFViewerApplication.open(url, { range: transport, });
 
           if (length) {
             PDFViewerApplication.pdfDocumentProperties.setFileSize(length);
           }
         },
-        onOpenWithData: function (data) {
+        onOpenWithData(data) {
           PDFViewerApplication.open(data);
         },
-        onOpenWithURL: function (url, length, originalURL) {
+        onOpenWithURL(url, length, originalURL) {
           var file = url, args = null;
           if (length !== undefined) {
-            args = {length: length};
+            args = { length, };
           }
           if (originalURL !== undefined) {
-            file = {file: url, originalURL: originalURL};
+            file = { file: url, originalURL, };
           }
           PDFViewerApplication.open(file, args);
         },
-        onError: function (e) {
+        onError(err) {
           PDFViewerApplication.error(mozL10n.get('loading_error', null,
-            'An error occurred while loading the PDF.'), e);
+            'An error occurred while loading the PDF.'), err);
         },
-        onProgress: function (loaded, total) {
+        onProgress(loaded, total) {
           PDFViewerApplication.progress(loaded / total);
         }
       });
@@ -674,7 +674,7 @@ var PDFViewerApplication = {
         }
 
         var moreInfo = {
-          message: message
+          message,
         };
         self.error(loadingErrorMessage, moreInfo);
 
@@ -728,7 +728,7 @@ var PDFViewerApplication = {
       }
       this.fellback = true;
       this.externalServices.fallback({
-        featureId: featureId,
+        featureId,
         url: this.baseUrl,
       }, function response(download) {
         if (!download) {
@@ -882,7 +882,7 @@ var PDFViewerApplication = {
     var pdfThumbnailViewer = this.pdfThumbnailViewer;
     pdfThumbnailViewer.setDocument(pdfDocument);
 
-    firstPagePromise.then(function(pdfPage) {
+    firstPagePromise.then((pdfPage) => {
       downloadedPromise.then(function () {
         self.eventBus.dispatch('documentload', {source: self});
       });
@@ -905,58 +905,65 @@ var PDFViewerApplication = {
       }
 
       var initialParams = {
-        destination: self.initialDestination,
-        bookmark: self.initialBookmark,
+        destination: this.initialDestination,
+        bookmark: this.initialBookmark,
         hash: null,
       };
+      var storedHash = this.viewerPrefs['defaultZoomValue'] ?
+        ('zoom=' + this.viewerPrefs['defaultZoomValue']) : null;
+      var sidebarView = this.viewerPrefs['sidebarViewOnLoad'];
 
-      store.initializedPromise.then(function resolved() {
-        var storedHash = null, sidebarView = null;
-        if (self.viewerPrefs['showPreviousViewOnLoad'] &&
-            store.get('exists', false)) {
-          var pageNum = store.get('page', '1');
-          var zoom = self.viewerPrefs['defaultZoomValue'] ||
-                     store.get('zoom', DEFAULT_SCALE_VALUE);
-          var left = store.get('scrollLeft', '0');
-          var top = store.get('scrollTop', '0');
-
-          storedHash = 'page=' + pageNum + '&zoom=' + zoom + ',' +
-                       left + ',' + top;
-
-          sidebarView = store.get('sidebarView', SidebarView.NONE);
-        } else if (self.viewerPrefs['defaultZoomValue']) {
-          storedHash = 'page=1&zoom=' + self.viewerPrefs['defaultZoomValue'];
+      new Promise((resolve, reject) => {
+        if (!this.viewerPrefs['showPreviousViewOnLoad']) {
+          resolve();
+          return;
         }
-        self.setInitialView(storedHash,
-          { scale: scale, sidebarView: sidebarView });
-
+        store.getMultiple({
+          exists: false,
+          page: '1',
+          zoom: DEFAULT_SCALE_VALUE,
+          scrollLeft: '0',
+          scrollTop: '0',
+          sidebarView: SidebarView.NONE,
+        }).then((values) => {
+          if (!values.exists) {
+            resolve();
+            return;
+          }
+          storedHash = 'page=' + values.page +
+            '&zoom=' + (this.viewerPrefs['defaultZoomValue'] || values.zoom) +
+            ',' + values.scrollLeft + ',' + values.scrollTop;
+          sidebarView = this.viewerPrefs['sidebarViewOnLoad'] ||
+                        (values.sidebarView | 0);
+          resolve();
+        }).catch(function() {
+          resolve();
+        });
+      }).then(() => {
+        this.setInitialView(storedHash, { sidebarView, scale, });
         initialParams.hash = storedHash;
 
         // Make all navigation keys work on document load,
         // unless the viewer is embedded in a web page.
-        if (!self.isViewerEmbedded) {
-          self.pdfViewer.focus();
+        if (!this.isViewerEmbedded) {
+          this.pdfViewer.focus();
         }
-      }, function rejected(reason) {
-        console.error(reason);
-        self.setInitialView(null, { scale: scale });
-      });
-
-      // For documents with different page sizes,
-      // ensure that the correct location becomes visible on load.
-      pagesPromise.then(function resolved() {
+        return pagesPromise;
+      }).then(() => {
+        // For documents with different page sizes, once all pages are resolved,
+        // ensure that the correct location becomes visible on load.
         if (!initialParams.destination && !initialParams.bookmark &&
             !initialParams.hash) {
           return;
         }
-        if (self.hasEqualPageSizes) {
+        if (this.hasEqualPageSizes) {
           return;
         }
-        self.initialDestination = initialParams.destination;
-        self.initialBookmark = initialParams.bookmark;
+        this.initialDestination = initialParams.destination;
+        this.initialBookmark = initialParams.bookmark;
 
-        self.pdfViewer.currentScaleValue = self.pdfViewer.currentScaleValue;
-        self.setInitialView(initialParams.hash);
+        this.pdfViewer.currentScaleValue = this.pdfViewer.currentScaleValue;
+        this.setInitialView(initialParams.hash);
       });
     });
 
@@ -1012,10 +1019,10 @@ var PDFViewerApplication = {
 
     Promise.all([onePageRendered, animationStarted]).then(function() {
       pdfDocument.getOutline().then(function(outline) {
-        self.pdfOutlineViewer.render({ outline: outline });
+        self.pdfOutlineViewer.render({ outline, });
       });
       pdfDocument.getAttachments().then(function(attachments) {
-        self.pdfAttachmentViewer.render({ attachments: attachments });
+        self.pdfAttachmentViewer.render({ attachments, });
       });
     });
 
@@ -1079,20 +1086,17 @@ var PDFViewerApplication = {
           type: 'documentInfo',
           version: versionId,
           generator: generatorId,
-          formType: formType
+          formType,
         });
       }
     });
   },
 
-  setInitialView: function pdfViewSetInitialView(storedHash, options) {
-    var scale = options && options.scale;
-    var sidebarView = options && options.sidebarView;
+  setInitialView(storedHash, options = {}) {
+    var { scale = 0, sidebarView = SidebarView.NONE, } = options;
 
     this.isInitialViewSet = true;
-
-    this.pdfSidebar.setInitialView(this.viewerPrefs['sidebarViewOnLoad'] ||
-                                   (sidebarView | 0));
+    this.pdfSidebar.setInitialView(sidebarView);
 
     if (this.initialDestination) {
       this.pdfLinkService.navigateTo(this.initialDestination);
@@ -1318,7 +1322,7 @@ if (typeof PDFJSDev === 'undefined' || PDFJSDev.test('GENERIC')) {
         'An error occurred while loading the PDF.');
 
       var moreInfo = {
-        message: message
+        message,
       };
       PDFViewerApplication.error(loadingErrorMessage, moreInfo);
       throw e;
@@ -1578,7 +1582,7 @@ function webViewerPageRendered(e) {
     PDFViewerApplication.pdfDocument.getStats().then(function (stats) {
       PDFViewerApplication.externalServices.reportTelemetry({
         type: 'documentStats',
-        stats: stats
+        stats,
       });
     });
   }
@@ -1645,33 +1649,28 @@ function webViewerPresentationModeChanged(e) {
     active ? PresentationModeState.FULLSCREEN : PresentationModeState.NORMAL;
 }
 
-function webViewerSidebarViewChanged(e) {
+function webViewerSidebarViewChanged(evt) {
   PDFViewerApplication.pdfRenderingQueue.isThumbnailViewEnabled =
     PDFViewerApplication.pdfSidebar.isThumbnailViewVisible;
 
   var store = PDFViewerApplication.store;
-  if (!store || !PDFViewerApplication.isInitialViewSet) {
+  if (store && PDFViewerApplication.isInitialViewSet) {
     // Only update the storage when the document has been loaded *and* rendered.
-    return;
+    store.set('sidebarView', evt.view).catch(function() { });
   }
-  store.initializedPromise.then(function() {
-    store.set('sidebarView', e.view).catch(function() {});
-  });
 }
 
-function webViewerUpdateViewarea(e) {
-  var location = e.location, store = PDFViewerApplication.store;
+function webViewerUpdateViewarea(evt) {
+  var location = evt.location, store = PDFViewerApplication.store;
 
-  if (store) {
-    store.initializedPromise.then(function() {
-      store.setMultiple({
-        'exists': true,
-        'page': location.pageNumber,
-        'zoom': location.scale,
-        'scrollLeft': location.left,
-        'scrollTop': location.top,
-      }).catch(function() { /* unable to write to storage */ });
-    });
+  if (store && PDFViewerApplication.isInitialViewSet) {
+    store.setMultiple({
+      'exists': true,
+      'page': location.pageNumber,
+      'zoom': location.scale,
+      'scrollLeft': location.left,
+      'scrollTop': location.top,
+    }).catch(function() { /* unable to write to storage */ });
   }
   var href =
     PDFViewerApplication.pdfLinkService.getAnchorUrl(location.pdfOpenParams);
@@ -2207,7 +2206,7 @@ localized.then(function webViewerLocalized() {
 var PDFPrintServiceFactory = {
   instance: {
     supportsPrinting: false,
-    createPrintService: function () {
+    createPrintService() {
       throw new Error('Not implemented: createPrintService');
     }
   }

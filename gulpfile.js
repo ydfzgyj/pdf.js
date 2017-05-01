@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 /* eslint-env node */
+/* eslint-disable object-shorthand */
 /* globals target */
 
 'use strict';
@@ -77,6 +78,7 @@ var DEFINES = {
   MINIFIED: false,
   SINGLE_FILE: false,
   COMPONENTS: false,
+  LIB: false,
   PDFJS_NEXT: false,
 };
 
@@ -526,15 +528,7 @@ gulp.task('bundle', ['buildnumber'], function () {
 
 function preprocessCSS(source, mode, defines, cleanup) {
   var outName = getTempFile('~preprocess', '.css');
-  var setup = {
-    defines: defines,
-    copy: [],
-    preprocess: [],
-    preprocessCSS: [
-      [mode, source, outName]
-    ]
-  };
-  builder.build(setup);
+  builder.preprocessCSS(mode, source, outName);
   var out = fs.readFileSync(outName).toString();
   fs.unlinkSync(outName);
   if (cleanup) {
@@ -549,15 +543,7 @@ function preprocessCSS(source, mode, defines, cleanup) {
 
 function preprocessHTML(source, defines) {
   var outName = getTempFile('~preprocess', '.html');
-  var setup = {
-    defines: defines,
-    copy: [],
-    preprocess: [
-      [source, outName]
-    ],
-    preprocessCSS: []
-  };
-  builder.build(setup);
+  builder.preprocess(source, outName, defines);
   var out = fs.readFileSync(outName).toString();
   fs.unlinkSync(outName);
 
@@ -567,15 +553,7 @@ function preprocessHTML(source, defines) {
 
 function preprocessJS(source, defines, cleanup) {
   var outName = getTempFile('~preprocess', '.js');
-  var setup = {
-    defines: defines,
-    copy: [],
-    preprocess: [
-      [source, outName]
-    ],
-    preprocessCSS: []
-  };
-  builder.build(setup);
+  builder.preprocess(source, outName, defines);
   var out = fs.readFileSync(outName).toString();
   fs.unlinkSync(outName);
   if (cleanup) {
@@ -851,7 +829,8 @@ gulp.task('mozcentral-pre', ['buildnumber', 'locale'], function () {
   // Clear out everything in the firefox extension build directory
   rimraf.sync(MOZCENTRAL_DIR);
 
-  var version = getVersionJSON().version;
+  var versionJSON = getVersionJSON();
+  var version = versionJSON.version, commit = versionJSON.commit;
 
   return merge([
     createBundle(defines).pipe(gulp.dest(MOZCENTRAL_CONTENT_DIR + 'build')),
@@ -880,6 +859,7 @@ gulp.task('mozcentral-pre', ['buildnumber', 'locale'], function () {
         .pipe(gulp.dest(MOZCENTRAL_L10N_DIR)),
     gulp.src(FIREFOX_EXTENSION_DIR + 'README.mozilla')
         .pipe(replace(/\bPDFJSSCRIPT_VERSION\b/g, version))
+        .pipe(replace(/\bPDFJSSCRIPT_COMMIT\b/g, commit))
         .pipe(gulp.dest(MOZCENTRAL_EXTENSION_DIR)),
     gulp.src('LICENSE').pipe(gulp.dest(MOZCENTRAL_EXTENSION_DIR)),
     gulp.src(FIREFOX_EXTENSION_DIR + 'tools/l10n.js')
@@ -998,6 +978,7 @@ gulp.task('lib', ['buildnumber'], function () {
     saveComments: false,
     defines: builder.merge(DEFINES, {
       GENERIC: true,
+      LIB: true,
       BUNDLE_VERSION: versionInfo.version,
       BUNDLE_BUILD: versionInfo.commit
     })

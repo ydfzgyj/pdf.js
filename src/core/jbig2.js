@@ -41,7 +41,7 @@ var Jbig2Image = (function Jbig2ImageClosure() {
   function ContextCache() {}
 
   ContextCache.prototype = {
-    getContexts: function(id) {
+    getContexts(id) {
       if (id in this) {
         return this[id];
       }
@@ -394,8 +394,8 @@ var Jbig2Image = (function Jbig2ImageClosure() {
           }
         }
         for (k = 0; k < referenceTemplateLength; k++) {
-          i0 = i + referenceTemplateY[k] + offsetY;
-          j0 = j + referenceTemplateX[k] + offsetX;
+          i0 = i + referenceTemplateY[k] - offsetY;
+          j0 = j + referenceTemplateX[k] - offsetX;
           if (i0 < 0 || i0 >= referenceHeight || j0 < 0 ||
               j0 >= referenceWidth) {
             contextLabel <<= 1; // out of bound pixel
@@ -720,7 +720,7 @@ var Jbig2Image = (function Jbig2ImageClosure() {
       position = segmentHeader.headerEnd;
       var segment = {
         header: segmentHeader,
-        data: data
+        data,
       };
       if (!header.randomAccess) {
         segment.start = position;
