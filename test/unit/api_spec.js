@@ -12,37 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-'use strict';
 
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs-test/unit/api_spec', ['exports', 'pdfjs/shared/util',
-      'pdfjs/display/dom_utils', 'pdfjs/display/global', 'pdfjs/display/api'],
-      factory);
-  } else if (typeof exports !== 'undefined') {
-      factory(exports, require('../../src/shared/util.js'),
-        require('../../src/display/dom_utils.js'),
-        require('../../src/display/global.js'),
-        require('../../src/display/api.js'));
-  } else {
-    factory((root.pdfjsTestUnitApiSpec = {}), root.pdfjsSharedUtil,
-      root.pdfjsDisplayDOMUtils, root.pdfjsDisplayGlobal, root.pdfjsDisplayApi);
-  }
-}(this, function (exports, sharedUtil, displayDOMUtils, displayGlobal,
-                  displayApi) {
-
-var PDFJS = displayGlobal.PDFJS;
-var createPromiseCapability = sharedUtil.createPromiseCapability;
-var DOMCanvasFactory = displayDOMUtils.DOMCanvasFactory;
-var RenderingCancelledException = displayDOMUtils.RenderingCancelledException;
-var PDFDocumentProxy = displayApi.PDFDocumentProxy;
-var InvalidPDFException = sharedUtil.InvalidPDFException;
-var MissingPDFException = sharedUtil.MissingPDFException;
-var PasswordResponses = sharedUtil.PasswordResponses;
-var PasswordException = sharedUtil.PasswordException;
-var PDFPageProxy = displayApi.PDFPageProxy;
-var StreamType = sharedUtil.StreamType;
-var FontType = sharedUtil.FontType;
+import {
+  createPromiseCapability, FontType, InvalidPDFException, MissingPDFException,
+  PasswordException, PasswordResponses, StreamType
+} from '../../src/shared/util';
+import {
+  DOMCanvasFactory, RenderingCancelledException
+} from '../../src/display/dom_utils';
+import { PDFDocumentProxy, PDFPageProxy } from '../../src/display/api';
+import { PDFJS } from '../../src/display/global';
 
 describe('api', function() {
   var basicApiUrl = new URL('../pdfs/basicapi.pdf', window.location).href;
@@ -237,7 +216,7 @@ describe('api', function() {
         var url = new URL('../pdfs/pr6531_2.pdf', window.location).href;
 
         var passwordNeededLoadingTask = PDFJS.getDocument({
-          url: url, password: '',
+          url, password: '',
         });
         var result1 = passwordNeededLoadingTask.promise.then(function () {
           done.fail('shall fail with no password');
@@ -249,7 +228,7 @@ describe('api', function() {
         });
 
         var passwordIncorrectLoadingTask = PDFJS.getDocument({
-          url: url, password: 'qwerty',
+          url, password: 'qwerty',
         });
         var result2 = passwordIncorrectLoadingTask.promise.then(function () {
           done.fail('shall fail with wrong password');
@@ -261,7 +240,7 @@ describe('api', function() {
         });
 
         var passwordAcceptedLoadingTask = PDFJS.getDocument({
-          url: url, password: 'asdfasdf',
+          url, password: 'asdfasdf',
         });
 
         var result3 = passwordAcceptedLoadingTask.promise.then(function (data) {
@@ -280,7 +259,7 @@ describe('api', function() {
         var url = new URL('../pdfs/issue3371.pdf', window.location).href;
         var passwordNeededLoadingTask = PDFJS.getDocument(url);
         var passwordIncorrectLoadingTask = PDFJS.getDocument({
-          url: url, password: 'qwerty',
+          url, password: 'qwerty',
         });
 
         passwordNeededLoadingTask.onPassword = function (callback, reason) {
@@ -363,7 +342,7 @@ describe('api', function() {
     });
     it('worker created and can be used in getDocument', function (done) {
       var worker = new PDFJS.PDFWorker('test1');
-      var loadingTask = PDFJS.getDocument({url: basicApiUrl, worker: worker});
+      var loadingTask = PDFJS.getDocument({ url: basicApiUrl, worker, });
       loadingTask.promise.then(function () {
         var docWorker = loadingTask._worker;
         expect(!!docWorker).toEqual(false);
@@ -914,7 +893,7 @@ describe('api', function() {
       });
 
       var docBaseUrlLoadingTask = PDFJS.getDocument({
-        url: url,
+        url,
         docBaseUrl: 'http://www.example.com/test/pdfs/qwerty.pdf',
       });
       var docBaseUrlPromise = docBaseUrlLoadingTask.promise.then(
@@ -925,7 +904,7 @@ describe('api', function() {
       });
 
       var invalidDocBaseUrlLoadingTask = PDFJS.getDocument({
-        url: url,
+        url,
         docBaseUrl: 'qwerty.pdf',
       });
       var invalidDocBaseUrlPromise = invalidDocBaseUrlLoadingTask.promise.then(
@@ -1022,7 +1001,7 @@ describe('api', function() {
 
       var renderTask = page.render({
         canvasContext: canvasAndCtx.context,
-        viewport: viewport,
+        viewport,
       });
       renderTask.cancel();
 
@@ -1062,7 +1041,7 @@ describe('api', function() {
                                                   viewport.height);
           return page.render({
             canvasContext: canvasAndCtx.context,
-            viewport: viewport,
+            viewport,
           }).then(function() {
             var data = canvasAndCtx.canvas.toDataURL();
             CanvasFactory.destroy(canvasAndCtx);
@@ -1210,4 +1189,3 @@ describe('api', function() {
     });
   });
 });
-}));
