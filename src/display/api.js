@@ -104,10 +104,16 @@ if (typeof PDFJSDev !== 'undefined' &&
  * @property {string} docBaseUrl - (optional) The base URL of the document,
  *   used when attempting to recover valid absolute URLs for annotations, and
  *   outline items, that (incorrectly) only specify relative URLs.
- * @property {boolean} disableNativeImageDecoder - (optional) Disable decoding
+ * @property {boolean} disableNativeImageDecoder - (deprecated) Disable decoding
  *   of certain (simple) JPEG images in the browser. This is useful for
  *   environments without DOM image support, such as e.g. Node.js.
  *   The default value is `false`.
+ * @property {string} nativeImageDecoderSupport - (optional) Strategy when
+ *   decoding of certain (simple) JPEG images in the browser.
+ *   The default value is `decode`; `none` for environments without DOM image
+ *   and canvas supports, such as e.g. Node.js; `display` for also environments
+ *   without supports above but add a simple Image object stub to decode JPEG
+ *   images as much as possible, see more in `examples/node/pdf2svg.js`.
  * @property {Object} CMapReaderFactory - (optional) The factory that will be
  *   used when reading built-in CMap files. Providing a custom factory is useful
  *   for environments without `XMLHttpRequest` support, such as e.g. Node.js.
@@ -229,9 +235,22 @@ function getDocument(src, pdfDataRangeTransport,
   }
 
   params.rangeChunkSize = params.rangeChunkSize || DEFAULT_RANGE_CHUNK_SIZE;
-  params.disableNativeImageDecoder = params.disableNativeImageDecoder === true;
   params.ignoreErrors = params.stopAtErrors !== true;
   var CMapReaderFactory = params.CMapReaderFactory || DOMCMapReaderFactory;
+
+  if ('disableNativeImageDecoder' in params) {
+    deprecated('parameter disableNativeImageDecoder, ' +
+      'use nativeImageDecoderSupport instead');
+  }
+  params.nativeImageDecoderSupport = params.nativeImageDecoderSupport ||
+    (params.disableNativeImageDecoder === true ? 'none' : 'decode');
+  if (params.nativeImageDecoderSupport !== 'decode' &&
+    params.nativeImageDecoderSupport !== 'none' &&
+    params.nativeImageDecoderSupport !== 'display') {
+    warn('Invalid parameter nativeImageDecoderSupport: ' +
+      'need either `decode`, `none` or `display`');
+    params.nativeImageDecoderSupport = 'decode';
+  }
 
   if (!worker) {
     // Worker was not provided -- creating and owning our own. If message port
@@ -293,7 +312,7 @@ function _fetchDocument(worker, source, pdfDataRangeTransport, docId) {
     postMessageTransfers: getDefaultSetting('postMessageTransfers') &&
                           !isPostMessageTransfersDisabled,
     docBaseUrl: source.docBaseUrl,
-    disableNativeImageDecoder: source.disableNativeImageDecoder,
+    nativeImageDecoderSupport: source.nativeImageDecoderSupport,
     ignoreErrors: source.ignoreErrors,
   }).then(function (workerId) {
     if (worker.destroyed) {

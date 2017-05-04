@@ -64,7 +64,6 @@ var isNum = sharedUtil.isNum;
 var isString = sharedUtil.isString;
 var getLookupTableFactory = sharedUtil.getLookupTableFactory;
 var warn = sharedUtil.warn;
-var isNodeJS = sharedUtil.isNodeJS;
 var Dict = corePrimitives.Dict;
 var Name = corePrimitives.Name;
 var isEOF = corePrimitives.isEOF;
@@ -114,7 +113,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
     forceDataSchema: false,
     maxImageSize: -1,
     disableFontFace: false,
-    disableNativeImageDecoder: false,
+    nativeImageDecoderSupport: 'decode',
     ignoreErrors: false,
   };
 
@@ -162,9 +161,6 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
    */
   NativeImageDecoder.isDecodable =
       function NativeImageDecoder_isDecodable(image, xref, res) {
-    if (isNodeJS()) {
-      return false;
-    }
     var dict = image.dict;
     if (dict.has('DecodeParms') || dict.has('DP')) {
       return false;
@@ -462,14 +458,14 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         return;
       }
 
-      var useNativeImageDecoder = !this.options.disableNativeImageDecoder;
+      var useNativeImageDecoder = this.options.nativeImageDecoderSupport;
       // If there is no imageMask, create the PDFImage and a lot
       // of image processing can be done here.
       var objId = 'img_' + this.idFactory.createObjId();
       operatorList.addDependency(objId);
       args = [objId, w, h];
 
-      if (useNativeImageDecoder &&
+      if (useNativeImageDecoder !== 'none' &&
           !softMask && !mask && image instanceof JpegStream &&
           NativeImageDecoder.isSupported(image, this.xref, resources)) {
         // These JPEGs don't need any more processing so we can just send it.
@@ -482,7 +478,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
       // Creates native image decoder only if a JPEG image or mask is present.
       var nativeImageDecoder = null;
-      if (useNativeImageDecoder &&
+      if (useNativeImageDecoder === 'decode' &&
           (image instanceof JpegStream || mask instanceof JpegStream ||
            softMask instanceof JpegStream)) {
         nativeImageDecoder = new NativeImageDecoder(self.xref, resources,
