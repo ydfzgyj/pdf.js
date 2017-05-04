@@ -148,17 +148,18 @@ global.document = {
   }
 };
 
-function Image() {}
-
-Image.prototype.__defineSetter__('src', function (val) {
-  this.source = val;
-  if (this.onload) {
-    this.onload();
-  }
-});
-
-Image.prototype.__defineGetter__('src', function () {
-  return this.source;
-});
+function Image () {
+  Object.defineProperty(this, 'src', {
+    get: function () {
+      return this.source;
+    },
+    set: function (val) {
+      this.source = val;
+      if (this.onload) {
+        this.onload();
+      }
+    }
+  })
+}
 
 global.Image = Image;
