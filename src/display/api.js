@@ -108,12 +108,14 @@ if (typeof PDFJSDev !== 'undefined' &&
  *   of certain (simple) JPEG images in the browser. This is useful for
  *   environments without DOM image support, such as e.g. Node.js.
  *   The default value is `false`.
- * @property {string} nativeImageDecoderSupport - (optional) Strategy when
- *   decoding of certain (simple) JPEG images in the browser.
- *   The default value is `decode`; `none` for environments without DOM image
- *   and canvas supports, such as e.g. Node.js; `display` for also environments
- *   without supports above but add a simple Image object stub to decode JPEG
- *   images as much as possible, see more in `examples/node/pdf2svg.js`.
+ * @property {string} nativeImageDecoderSupport - (optional) Strategy for
+ *   decoding certain (simple) JPEG images in the browser. This is useful for
+ *   environments without DOM image and canvas support, such as e.g. Node.js.
+ *   Valid values are 'decode', 'display' or 'none'; where 'decode' is intended
+ *   for browsers with full image/canvas support, 'display' for environments
+ *   with limited image support through stubs (useful for SVG conversion),
+ *   and 'none' where JPEG images will be decoded entirely by PDF.js.
+ *   The default value is 'decode'.
  * @property {Object} CMapReaderFactory - (optional) The factory that will be
  *   used when reading built-in CMap files. Providing a custom factory is useful
  *   for environments without `XMLHttpRequest` support, such as e.g. Node.js.
@@ -238,7 +240,7 @@ function getDocument(src, pdfDataRangeTransport,
   params.ignoreErrors = params.stopAtErrors !== true;
   var CMapReaderFactory = params.CMapReaderFactory || DOMCMapReaderFactory;
 
-  if ('disableNativeImageDecoder' in params) {
+  if (params.disableNativeImageDecoder !== undefined) {
     deprecated('parameter disableNativeImageDecoder, ' +
       'use nativeImageDecoderSupport instead');
   }
@@ -246,8 +248,8 @@ function getDocument(src, pdfDataRangeTransport,
     (params.disableNativeImageDecoder === true ? NativeImageDecoding.NONE :
       NativeImageDecoding.DECODE);
   if (params.nativeImageDecoderSupport !== NativeImageDecoding.DECODE &&
-    params.nativeImageDecoderSupport !== NativeImageDecoding.NONE &&
-    params.nativeImageDecoderSupport !== NativeImageDecoding.DISPLAY) {
+      params.nativeImageDecoderSupport !== NativeImageDecoding.NONE &&
+      params.nativeImageDecoderSupport !== NativeImageDecoding.DISPLAY) {
     warn('Invalid parameter nativeImageDecoderSupport: ' +
       'need a state of enum {NativeImageDecoding}');
     params.nativeImageDecoderSupport = NativeImageDecoding.DECODE;
