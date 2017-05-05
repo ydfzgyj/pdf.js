@@ -389,13 +389,13 @@ var PDFDocumentLoadingTask = (function PDFDocumentLoadingTaskClosure() {
 
       var transportDestroyed = !this._transport ? Promise.resolve() :
         this._transport.destroy();
-      return transportDestroyed.then(function () {
+      return transportDestroyed.then(() => {
         this._transport = null;
         if (this._worker) {
           this._worker.destroy();
           this._worker = null;
         }
-      }.bind(this));
+      });
     },
 
     /**
@@ -456,22 +456,22 @@ var PDFDataRangeTransport = (function pdfDataRangeTransportClosure() {
     },
 
     onDataProgress: function PDFDataRangeTransport_onDataProgress(loaded) {
-      this._readyCapability.promise.then(function () {
+      this._readyCapability.promise.then(() => {
         var listeners = this._progressListeners;
         for (var i = 0, n = listeners.length; i < n; ++i) {
           listeners[i](loaded);
         }
-      }.bind(this));
+      });
     },
 
     onDataProgressiveRead:
         function PDFDataRangeTransport_onDataProgress(chunk) {
-      this._readyCapability.promise.then(function () {
+      this._readyCapability.promise.then(() => {
         var listeners = this._progressiveReadListeners;
         for (var i = 0, n = listeners.length; i < n; ++i) {
           listeners[i](chunk);
         }
-      }.bind(this));
+      });
     },
 
     transportReady: function PDFDataRangeTransport_transportReady() {
@@ -842,6 +842,26 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
         });
       }
 
+      var complete = (error) => {
+        var i = intentState.renderTasks.indexOf(internalRenderTask);
+        if (i >= 0) {
+          intentState.renderTasks.splice(i, 1);
+        }
+
+        if (this.cleanupAfterRender) {
+          this.pendingCleanup = true;
+        }
+        this._tryCleanup();
+
+        if (error) {
+          internalRenderTask.capability.reject(error);
+        } else {
+          internalRenderTask.capability.resolve();
+        }
+        stats.timeEnd('Rendering');
+        stats.timeEnd('Overall');
+      };
+
       var internalRenderTask = new InternalRenderTask(complete, params,
                                                       this.objs,
                                                       this.commonObjs,
@@ -861,41 +881,15 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
         renderTask.onContinue = params.continueCallback;
       }
 
-      var self = this;
-      intentState.displayReadyCapability.promise.then(
-        function pageDisplayReadyPromise(transparency) {
-          if (self.pendingCleanup) {
-            complete();
-            return;
-          }
-          stats.time('Rendering');
-          internalRenderTask.initializeGraphics(transparency);
-          internalRenderTask.operatorListChanged();
-        },
-        function pageDisplayReadPromiseError(reason) {
-          complete(reason);
+      intentState.displayReadyCapability.promise.then((transparency) => {
+        if (this.pendingCleanup) {
+          complete();
+          return;
         }
-      );
-
-      function complete(error) {
-        var i = intentState.renderTasks.indexOf(internalRenderTask);
-        if (i >= 0) {
-          intentState.renderTasks.splice(i, 1);
-        }
-
-        if (self.cleanupAfterRender) {
-          self.pendingCleanup = true;
-        }
-        self._tryCleanup();
-
-        if (error) {
-          internalRenderTask.capability.reject(error);
-        } else {
-          internalRenderTask.capability.resolve();
-        }
-        stats.timeEnd('Rendering');
-        stats.timeEnd('Overall');
-      }
+        stats.time('Rendering');
+        internalRenderTask.initializeGraphics(transparency);
+        internalRenderTask.operatorListChanged();
+      }, complete);
 
       return renderTask;
     },
@@ -1065,6 +1059,88 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
   return PDFPageProxy;
 })();
 
+class LoopbackPort {
+  constructor(defer) {
+    this._listeners = [];
+    this._defer = defer;
+    this._deferred = Promise.resolve(undefined);
+  }
+
+  postMessage(obj, transfers) {
+    function cloneValue(value) {
+      // Trying to perform a structured clone close to the spec, including
+      // transfers.
+      if (typeof value !== 'object' || value === null) {
+        return value;
+      }
+      if (cloned.has(value)) { // already cloned the object
+        return cloned.get(value);
+      }
+      var result;
+      var buffer;
+      if ((buffer = value.buffer) && isArrayBuffer(buffer)) {
+        // We found object with ArrayBuffer (typed array).
+        var transferable = transfers && transfers.indexOf(buffer) >= 0;
+        if (value === buffer) {
+          // Special case when we are faking typed arrays in compatibility.js.
+          result = value;
+        } else if (transferable) {
+          result = new value.constructor(buffer, value.byteOffset,
+                                         value.byteLength);
+        } else {
+          result = new value.constructor(value);
+        }
+        cloned.set(value, result);
+        return result;
+      }
+      result = isArray(value) ? [] : {};
+      cloned.set(value, result); // adding to cache now for cyclic references
+      // Cloning all value and object properties, however ignoring properties
+      // defined via getter.
+      for (var i in value) {
+        var desc, p = value;
+        while (!(desc = Object.getOwnPropertyDescriptor(p, i))) {
+          p = Object.getPrototypeOf(p);
+        }
+        if (typeof desc.value === 'undefined' ||
+            typeof desc.value === 'function') {
+          continue;
+        }
+        result[i] = cloneValue(desc.value);
+      }
+      return result;
+    }
+
+    if (!this._defer) {
+      this._listeners.forEach(function (listener) {
+        listener.call(this, {data: obj});
+      }, this);
+      return;
+    }
+
+    var cloned = new WeakMap();
+    var e = {data: cloneValue(obj)};
+    this._deferred.then(() => {
+      this._listeners.forEach(function (listener) {
+        listener.call(this, e);
+      }, this);
+    });
+  }
+
+  addEventListener(name, listener) {
+    this._listeners.push(listener);
+  }
+
+  removeEventListener(name, listener) {
+    var i = this._listeners.indexOf(listener);
+    this._listeners.splice(i, 1);
+  }
+
+  terminate() {
+    this._listeners = [];
+  }
+}
+
 /**
  * PDF.js web worker abstraction, it controls instantiation of PDF documents and
  * WorkerTransport for them.  If creation of a web worker is not possible,
@@ -1132,84 +1208,6 @@ var PDFWorker = (function PDFWorkerClosure() {
     }
     return fakeWorkerFilesLoadedCapability.promise;
   }
-
-  function FakeWorkerPort(defer) {
-    this._listeners = [];
-    this._defer = defer;
-    this._deferred = Promise.resolve(undefined);
-  }
-  FakeWorkerPort.prototype = {
-    postMessage(obj, transfers) {
-      function cloneValue(value) {
-        // Trying to perform a structured clone close to the spec, including
-        // transfers.
-        if (typeof value !== 'object' || value === null) {
-          return value;
-        }
-        if (cloned.has(value)) { // already cloned the object
-          return cloned.get(value);
-        }
-        var result;
-        var buffer;
-        if ((buffer = value.buffer) && isArrayBuffer(buffer)) {
-          // We found object with ArrayBuffer (typed array).
-          var transferable = transfers && transfers.indexOf(buffer) >= 0;
-          if (value === buffer) {
-            // Special case when we are faking typed arrays in compatibility.js.
-            result = value;
-          } else if (transferable) {
-            result = new value.constructor(buffer, value.byteOffset,
-                                           value.byteLength);
-          } else {
-            result = new value.constructor(value);
-          }
-          cloned.set(value, result);
-          return result;
-        }
-        result = isArray(value) ? [] : {};
-        cloned.set(value, result); // adding to cache now for cyclic references
-        // Cloning all value and object properties, however ignoring properties
-        // defined via getter.
-        for (var i in value) {
-          var desc, p = value;
-          while (!(desc = Object.getOwnPropertyDescriptor(p, i))) {
-            p = Object.getPrototypeOf(p);
-          }
-          if (typeof desc.value === 'undefined' ||
-              typeof desc.value === 'function') {
-            continue;
-          }
-          result[i] = cloneValue(desc.value);
-        }
-        return result;
-      }
-
-      if (!this._defer) {
-        this._listeners.forEach(function (listener) {
-          listener.call(this, {data: obj});
-        }, this);
-        return;
-      }
-
-      var cloned = new WeakMap();
-      var e = {data: cloneValue(obj)};
-      this._deferred.then(function () {
-        this._listeners.forEach(function (listener) {
-          listener.call(this, e);
-        }, this);
-      }.bind(this));
-    },
-    addEventListener(name, listener) {
-      this._listeners.push(listener);
-    },
-    removeEventListener(name, listener) {
-      var i = this._listeners.indexOf(listener);
-      this._listeners.splice(i, 1);
-    },
-    terminate() {
-      this._listeners = [];
-    }
-  };
 
   function createCDNWrapper(url) {
     // We will rely on blob URL's property to specify origin.
@@ -1283,7 +1281,7 @@ var PDFWorker = (function PDFWorkerClosure() {
           // https://bugzilla.mozilla.org/show_bug.cgi?id=683280
           var worker = new Worker(workerSrc);
           var messageHandler = new MessageHandler('main', 'worker', worker);
-          var terminateEarly = function() {
+          var terminateEarly = () => {
             worker.removeEventListener('error', onWorkerError);
             messageHandler.destroy();
             worker.terminate();
@@ -1294,18 +1292,18 @@ var PDFWorker = (function PDFWorkerClosure() {
               // error (e.g. NetworkError / SecurityError).
               this._setupFakeWorker();
             }
-          }.bind(this);
+          };
 
-          var onWorkerError = function(event) {
+          var onWorkerError = () => {
             if (!this._webWorker) {
               // Worker failed to initialize due to an error. Clean up and fall
               // back to the fake worker.
               terminateEarly();
             }
-          }.bind(this);
+          };
           worker.addEventListener('error', onWorkerError);
 
-          messageHandler.on('test', function PDFWorker_test(data) {
+          messageHandler.on('test', (data) => {
             worker.removeEventListener('error', onWorkerError);
             if (this.destroyed) {
               terminateEarly();
@@ -1329,7 +1327,7 @@ var PDFWorker = (function PDFWorkerClosure() {
               messageHandler.destroy();
               worker.terminate();
             }
-          }.bind(this));
+          });
 
           messageHandler.on('console_log', function (data) {
             console.log.apply(console, data);
@@ -1338,7 +1336,7 @@ var PDFWorker = (function PDFWorkerClosure() {
             console.error.apply(console, data);
           });
 
-          messageHandler.on('ready', function (data) {
+          messageHandler.on('ready', (data) => {
             worker.removeEventListener('error', onWorkerError);
             if (this.destroyed) {
               terminateEarly();
@@ -1350,7 +1348,7 @@ var PDFWorker = (function PDFWorkerClosure() {
               // We need fallback to a faked worker.
               this._setupFakeWorker();
             }
-          }.bind(this));
+          });
 
           var sendTest = function () {
             var postMessageTransfers =
@@ -1389,7 +1387,7 @@ var PDFWorker = (function PDFWorkerClosure() {
         isWorkerDisabled = true;
       }
 
-      setupFakeWorkerGlobal().then(function (WorkerMessageHandler) {
+      setupFakeWorkerGlobal().then((WorkerMessageHandler) => {
         if (this.destroyed) {
           this._readyCapability.reject(new Error('Worker was destroyed'));
           return;
@@ -1399,7 +1397,7 @@ var PDFWorker = (function PDFWorkerClosure() {
         // structured cloning) when typed arrays are not supported. Relying
         // on a chance that messages will be sent in proper order.
         var isTypedArraysPresent = Uint8Array !== Float32Array;
-        var port = new FakeWorkerPort(isTypedArraysPresent);
+        var port = new LoopbackPort(isTypedArraysPresent);
         this._port = port;
 
         // All fake workers use the same port, making id unique.
@@ -1413,7 +1411,7 @@ var PDFWorker = (function PDFWorkerClosure() {
         var messageHandler = new MessageHandler(id, id + '_worker', port);
         this._messageHandler = messageHandler;
         this._readyCapability.resolve();
-      }.bind(this));
+      });
     },
 
     /**
@@ -1488,21 +1486,20 @@ var WorkerTransport = (function WorkerTransportClosure() {
       });
       this.pageCache = [];
       this.pagePromises = [];
-      var self = this;
       // We also need to wait for the worker to finish its long running tasks.
       var terminated = this.messageHandler.sendWithPromise('Terminate', null);
       waitOn.push(terminated);
-      Promise.all(waitOn).then(function () {
-        self.fontLoader.clear();
-        if (self.pdfDataRangeTransport) {
-          self.pdfDataRangeTransport.abort();
-          self.pdfDataRangeTransport = null;
+      Promise.all(waitOn).then(() => {
+        this.fontLoader.clear();
+        if (this.pdfDataRangeTransport) {
+          this.pdfDataRangeTransport.abort();
+          this.pdfDataRangeTransport = null;
         }
-        if (self.messageHandler) {
-          self.messageHandler.destroy();
-          self.messageHandler = null;
+        if (this.messageHandler) {
+          this.messageHandler.destroy();
+          this.messageHandler = null;
         }
-        self.destroyCapability.resolve();
+        this.destroyCapability.resolve();
       }, this.destroyCapability.reject);
       return this.destroyCapability.promise;
     },
@@ -1657,13 +1654,11 @@ var WorkerTransport = (function WorkerTransportClosure() {
               disableFontFace: getDefaultSetting('disableFontFace'),
               fontRegistry,
             });
+            var fontReady = (fontObjs) => {
+              this.commonObjs.resolve(id, font);
+            };
 
-            this.fontLoader.bind(
-              [font],
-              function fontReady(fontObjs) {
-                this.commonObjs.resolve(id, font);
-              }.bind(this)
-            );
+            this.fontLoader.bind([font], fontReady);
             break;
           case 'FontPath':
             this.commonObjs.resolve(id, data[2]);
@@ -1837,14 +1832,14 @@ var WorkerTransport = (function WorkerTransportClosure() {
       }
       var promise = this.messageHandler.sendWithPromise('GetPage', {
         pageIndex,
-      }).then(function (pageInfo) {
+      }).then((pageInfo) => {
         if (this.destroyed) {
           throw new Error('Transport destroyed');
         }
         var page = new PDFPageProxy(pageIndex, pageInfo, this);
         this.pageCache[pageIndex] = page;
         return page;
-      }.bind(this));
+      });
       this.pagePromises[pageIndex] = promise;
       return promise;
     },
@@ -1905,8 +1900,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
     },
 
     startCleanup: function WorkerTransport_startCleanup() {
-      this.messageHandler.sendWithPromise('Cleanup', null).
-        then(function endCleanup() {
+      this.messageHandler.sendWithPromise('Cleanup', null).then(() => {
         for (var i = 0, ii = this.pageCache.length; i < ii; i++) {
           var page = this.pageCache[i];
           if (page) {
@@ -1915,7 +1909,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
         }
         this.commonObjs.clear();
         this.fontLoader.clear();
-      }.bind(this));
+      });
     }
   };
   return WorkerTransport;
@@ -2236,6 +2230,7 @@ if (typeof PDFJSDev !== 'undefined') {
 
 export {
   getDocument,
+  LoopbackPort,
   PDFDataRangeTransport,
   PDFWorker,
   PDFDocumentProxy,
