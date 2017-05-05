@@ -52,6 +52,7 @@ var IDENTITY_MATRIX = sharedUtil.IDENTITY_MATRIX;
 var UNSUPPORTED_FEATURES = sharedUtil.UNSUPPORTED_FEATURES;
 var ImageKind = sharedUtil.ImageKind;
 var OPS = sharedUtil.OPS;
+var NativeImageDecoding = sharedUtil.NativeImageDecoding;
 var TextRenderingMode = sharedUtil.TextRenderingMode;
 var CMapCompressionType = sharedUtil.CMapCompressionType;
 var Util = sharedUtil.Util;
@@ -113,7 +114,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
     forceDataSchema: false,
     maxImageSize: -1,
     disableFontFace: false,
-    nativeImageDecoderSupport: 'decode',
+    nativeImageDecoderSupport: NativeImageDecoding.DECODE,
     ignoreErrors: false,
   };
 
@@ -465,7 +466,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       operatorList.addDependency(objId);
       args = [objId, w, h];
 
-      if (useNativeImageDecoder !== 'none' &&
+      if (useNativeImageDecoder !== NativeImageDecoding.NONE &&
           !softMask && !mask && image instanceof JpegStream &&
           NativeImageDecoder.isSupported(image, this.xref, resources)) {
         // These JPEGs don't need any more processing so we can just send it.
@@ -478,7 +479,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
       // Creates native image decoder only if a JPEG image or mask is present.
       var nativeImageDecoder = null;
-      if (useNativeImageDecoder === 'decode' &&
+      if (useNativeImageDecoder === NativeImageDecoding.DECODE &&
           (image instanceof JpegStream || mask instanceof JpegStream ||
            softMask instanceof JpegStream)) {
         nativeImageDecoder = new NativeImageDecoder(self.xref, resources,

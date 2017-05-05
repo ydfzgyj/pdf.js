@@ -17,9 +17,9 @@
 import {
   createPromiseCapability, deprecated, error, getVerbosityLevel, globalScope,
   info, InvalidPDFException, isArray, isArrayBuffer, isInt, isSameOrigin,
-  loadJpegStream, MessageHandler, MissingPDFException, PageViewport,
-  PasswordException, StatTimer, stringToBytes, UnexpectedResponseException,
-  UnknownErrorException, Util, warn
+  loadJpegStream, MessageHandler, MissingPDFException, NativeImageDecoding,
+  PageViewport, PasswordException, StatTimer, stringToBytes,
+  UnexpectedResponseException, UnknownErrorException, Util, warn
 } from '../shared/util';
 import {
   DOMCanvasFactory, DOMCMapReaderFactory, getDefaultSetting,
@@ -243,13 +243,14 @@ function getDocument(src, pdfDataRangeTransport,
       'use nativeImageDecoderSupport instead');
   }
   params.nativeImageDecoderSupport = params.nativeImageDecoderSupport ||
-    (params.disableNativeImageDecoder === true ? 'none' : 'decode');
-  if (params.nativeImageDecoderSupport !== 'decode' &&
-    params.nativeImageDecoderSupport !== 'none' &&
-    params.nativeImageDecoderSupport !== 'display') {
+    (params.disableNativeImageDecoder === true ? NativeImageDecoding.NONE :
+      NativeImageDecoding.DECODE);
+  if (params.nativeImageDecoderSupport !== NativeImageDecoding.DECODE &&
+    params.nativeImageDecoderSupport !== NativeImageDecoding.NONE &&
+    params.nativeImageDecoderSupport !== NativeImageDecoding.DISPLAY) {
     warn('Invalid parameter nativeImageDecoderSupport: ' +
-      'need either `decode`, `none` or `display`');
-    params.nativeImageDecoderSupport = 'decode';
+      'need a state of enum {NativeImageDecoding}');
+    params.nativeImageDecoderSupport = NativeImageDecoding.DECODE;
   }
 
   if (!worker) {

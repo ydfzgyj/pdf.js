@@ -47,7 +47,7 @@ function getFileNameFromPath(path) {
 pdfjsLib.getDocument({
   data: data,
   // Try to export JPEG directly if don't need canvas to decode images
-  nativeImageDecoderSupport: 'display'
+  nativeImageDecoderSupport: pdfjsLib.NativeImageDecoding.DISPLAY
 }).then(function (doc) {
   var numPages = doc.numPages;
   console.log('# Document Loaded');
