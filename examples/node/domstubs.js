@@ -149,17 +149,19 @@ global.document = {
 };
 
 function Image () {
-  Object.defineProperty(this, 'src', {
-    get: function () {
-      return this.source;
-    },
-    set: function (val) {
-      this.source = val;
-      if (this.onload) {
-        this.onload();
-      }
+  this._src = null;
+  this.onload = null;
+}
+Image.prototype = {
+  get src () {
+    return this._src;
+  },
+  set src (value) {
+    this._src = value;
+    if (this.onload) {
+      this.onload();
     }
-  })
+  }
 }
 
 global.Image = Image;
