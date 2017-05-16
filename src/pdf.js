@@ -31,7 +31,7 @@ exports.PDFJS = pdfjsDisplayGlobal.PDFJS;
 exports.build = pdfjsDisplayAPI.build;
 exports.version = pdfjsDisplayAPI.version;
 exports.getDocument = pdfjsDisplayAPI.getDocument;
-exports.LoobpackPort = pdfjsDisplayAPI.LoopbackPort;
+exports.LoopbackPort = pdfjsDisplayAPI.LoopbackPort;
 exports.PDFDataRangeTransport = pdfjsDisplayAPI.PDFDataRangeTransport;
 exports.PDFWorker = pdfjsDisplayAPI.PDFWorker;
 exports.renderTextLayer = pdfjsDisplayTextLayer.renderTextLayer;
@@ -42,6 +42,7 @@ exports.PasswordResponses = pdfjsSharedUtil.PasswordResponses;
 exports.InvalidPDFException = pdfjsSharedUtil.InvalidPDFException;
 exports.MissingPDFException = pdfjsSharedUtil.MissingPDFException;
 exports.SVGGraphics = pdfjsDisplaySVG.SVGGraphics;
+exports.NativeImageDecoding = pdfjsSharedUtil.NativeImageDecoding;
 exports.UnexpectedResponseException =
   pdfjsSharedUtil.UnexpectedResponseException;
 exports.OPS = pdfjsSharedUtil.OPS;
