@@ -13,7 +13,8 @@
  * limitations under the License.
  */
 
-import { CMapCompressionType } from '../../src/shared/util';
+import { CMapCompressionType, isNodeJS } from '../../src/shared/util';
+import { isRef } from '../../src/core/primitives';
 
 class NodeFileReaderFactory {
   static fetch(params) {
@@ -21,6 +22,26 @@ class NodeFileReaderFactory {
     var file = fs.readFileSync(params.path);
     return new Uint8Array(file);
   }
+}
+
+const TEST_PDFS_PATH = {
+  dom: '../pdfs/',
+  node: './test/pdfs/',
+};
+
+function buildGetDocumentParams(filename, options) {
+  let params = Object.create(null);
+  if (isNodeJS()) {
+    params.data = NodeFileReaderFactory.fetch({
+      path: TEST_PDFS_PATH.node + filename,
+    });
+  } else {
+    params.url = new URL(TEST_PDFS_PATH.dom + filename, window.location).href;
+  }
+  for (let option in options) {
+    params[option] = options[option];
+  }
+  return params;
 }
 
 class NodeCMapReaderFactory {
@@ -54,7 +75,40 @@ class NodeCMapReaderFactory {
   }
 }
 
+class XRefMock {
+  constructor(array) {
+    this._map = Object.create(null);
+
+    for (let key in array) {
+      let obj = array[key];
+      this._map[obj.ref.toString()] = obj.data;
+    }
+  }
+
+  fetch(ref) {
+    return this._map[ref.toString()];
+  }
+
+  fetchAsync(ref) {
+    return Promise.resolve(this.fetch(ref));
+  }
+
+  fetchIfRef(obj) {
+    if (!isRef(obj)) {
+      return obj;
+    }
+    return this.fetch(obj);
+  }
+
+  fetchIfRefAsync(obj) {
+    return Promise.resolve(this.fetchIfRef(obj));
+  }
+}
+
 export {
   NodeFileReaderFactory,
   NodeCMapReaderFactory,
+  XRefMock,
+  buildGetDocumentParams,
+  TEST_PDFS_PATH,
 };

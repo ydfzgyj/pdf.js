@@ -12,8 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* globals Components, Services, dump, XPCOMUtils, PdfStreamConverter,
-           APP_SHUTDOWN, PdfjsChromeUtils, PdfjsContentUtils */
+/* globals PdfStreamConverter, APP_SHUTDOWN, PdfjsChromeUtils,
+           PdfjsContentUtils */
 
 "use strict";
 
@@ -112,7 +112,7 @@ Factory.prototype = {
   lockFactory: function lockFactory(lock) {
     // No longer used as of gecko 1.7.
     throw Cr.NS_ERROR_NOT_IMPLEMENTED;
-  }
+  },
 };
 
 var pdfStreamConverterFactory = new Factory();

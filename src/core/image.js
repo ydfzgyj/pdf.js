@@ -13,37 +13,11 @@
  * limitations under the License.
  */
 
-'use strict';
-
-(function (root, factory) {
-  if (typeof define === 'function' && define.amd) {
-    define('pdfjs/core/image', ['exports', 'pdfjs/shared/util',
-      'pdfjs/core/primitives', 'pdfjs/core/colorspace', 'pdfjs/core/stream',
-      'pdfjs/core/jpx'], factory);
-  } else if (typeof exports !== 'undefined') {
-    factory(exports, require('../shared/util.js'), require('./primitives.js'),
-      require('./colorspace.js'), require('./stream.js'),
-      require('./jpx.js'));
-  } else {
-    factory((root.pdfjsCoreImage = {}), root.pdfjsSharedUtil,
-      root.pdfjsCorePrimitives, root.pdfjsCoreColorSpace, root.pdfjsCoreStream,
-      root.pdfjsCoreJpx);
-  }
-}(this, function (exports, sharedUtil, corePrimitives, coreColorSpace,
-                  coreStream, coreJpx) {
-
-var ImageKind = sharedUtil.ImageKind;
-var assert = sharedUtil.assert;
-var error = sharedUtil.error;
-var info = sharedUtil.info;
-var isArray = sharedUtil.isArray;
-var warn = sharedUtil.warn;
-var Name = corePrimitives.Name;
-var isStream = corePrimitives.isStream;
-var ColorSpace = coreColorSpace.ColorSpace;
-var DecodeStream = coreStream.DecodeStream;
-var JpegStream = coreStream.JpegStream;
-var JpxImage = coreJpx.JpxImage;
+import { assert, FormatError, ImageKind, info, warn } from '../shared/util';
+import { DecodeStream, JpegStream } from './stream';
+import { isStream, Name } from './primitives';
+import { ColorSpace } from './colorspace';
+import { JpxImage } from './jpx';
 
 var PDFImage = (function PDFImageClosure() {
   /**
@@ -122,8 +96,8 @@ var PDFImage = (function PDFImageClosure() {
     this.height = dict.get('Height', 'H');
 
     if (this.width < 1 || this.height < 1) {
-      error('Invalid image width: ' + this.width + ' or height: ' +
-            this.height);
+      throw new FormatError(`Invalid image width: ${this.width} or ` +
+                            `height: ${this.height}`);
     }
 
     this.interpolate = dict.get('Interpolate', 'I') || false;
@@ -137,7 +111,8 @@ var PDFImage = (function PDFImageClosure() {
         if (this.imageMask) {
           bitsPerComponent = 1;
         } else {
-          error('Bits per component missing in image: ' + this.imageMask);
+          throw new FormatError(
+            `Bits per component missing in image: ${this.imageMask}`);
         }
       }
     }
@@ -158,8 +133,8 @@ var PDFImage = (function PDFImageClosure() {
             colorSpace = Name.get('DeviceCMYK');
             break;
           default:
-            error('JPX images with ' + this.numComps +
-                  ' color components not supported.');
+            throw new Error(`JPX images with ${this.numComps} ` +
+                            'color components not supported.');
         }
       }
       this.colorSpace = ColorSpace.parse(colorSpace, xref, res);
@@ -222,7 +197,7 @@ var PDFImage = (function PDFImageClosure() {
       if (mask) {
         if (isStream(mask)) {
           maskPromise = handleImageData(mask, nativeDecoder);
-        } else if (isArray(mask)) {
+        } else if (Array.isArray(mask)) {
           maskPromise = Promise.resolve(mask);
         } else {
           warn('Unsupported mask format.');
@@ -276,7 +251,7 @@ var PDFImage = (function PDFImageClosure() {
     // in this thread can be relying on its contents.
     if (inverseDecode) {
       for (i = 0; i < actualLength; i++) {
-        data[i] = ~data[i];
+        data[i] ^= 0xFF;
       }
     }
 
@@ -431,7 +406,7 @@ var PDFImage = (function PDFImageClosure() {
             alphaBuf = resizeImageMask(alphaBuf, mask.bpc, sw, sh,
                                        width, height);
           }
-        } else if (isArray(mask)) {
+        } else if (Array.isArray(mask)) {
           // Color key mask: if any of the components are outside the range
           // then they should be painted.
           alphaBuf = new Uint8Array(width * height);
@@ -450,7 +425,7 @@ var PDFImage = (function PDFImageClosure() {
             alphaBuf[i] = opacity;
           }
         } else {
-          error('Unknown mask format.');
+          throw new FormatError('Unknown mask format.');
         }
       }
 
@@ -502,7 +477,7 @@ var PDFImage = (function PDFImageClosure() {
       var drawHeight = this.drawHeight;
       var imgData = { // other fields are filled in below
         width: drawWidth,
-        height: drawHeight
+        height: drawHeight,
       };
 
       var numComps = this.numComps;
@@ -609,7 +584,8 @@ var PDFImage = (function PDFImageClosure() {
     fillGrayBuffer: function PDFImage_fillGrayBuffer(buffer) {
       var numComps = this.numComps;
       if (numComps !== 1) {
-        error('Reading gray scale from a color image: ' + numComps);
+        throw new FormatError(
+          `Reading gray scale from a color image: ${numComps}`);
       }
 
       var width = this.width;
@@ -659,10 +635,11 @@ var PDFImage = (function PDFImageClosure() {
       this.image.drawHeight = drawHeight || this.height;
       this.image.forceRGB = !!forceRGB;
       return this.image.getBytes(length);
-    }
+    },
   };
   return PDFImage;
 })();
 
-exports.PDFImage = PDFImage;
-}));
+export {
+  PDFImage,
+};

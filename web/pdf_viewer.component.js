@@ -25,12 +25,14 @@ var pdfjsWebPDFHistory = require('./pdf_history.js');
 var pdfjsWebPDFFindController = require('./pdf_find_controller.js');
 var pdfjsWebUIUtils = require('./ui_utils.js');
 var pdfjsWebDownloadManager = require('./download_manager.js');
+var pdfjsWebGenericL10n = require('./genericl10n.js');
 
 var PDFJS = pdfjsLib.PDFJS;
 
 PDFJS.PDFViewer = pdfjsWebPDFViewer.PDFViewer;
 PDFJS.PDFPageView = pdfjsWebPDFPageView.PDFPageView;
 PDFJS.PDFLinkService = pdfjsWebPDFLinkService.PDFLinkService;
+PDFJS.SimpleLinkService = pdfjsWebPDFLinkService.SimpleLinkService;
 PDFJS.TextLayerBuilder = pdfjsWebTextLayerBuilder.TextLayerBuilder;
 PDFJS.DefaultTextLayerFactory =
   pdfjsWebTextLayerBuilder.DefaultTextLayerFactory;
@@ -44,5 +46,7 @@ PDFJS.EventBus = pdfjsWebUIUtils.EventBus;
 
 PDFJS.DownloadManager = pdfjsWebDownloadManager.DownloadManager;
 PDFJS.ProgressBar = pdfjsWebUIUtils.ProgressBar;
+PDFJS.GenericL10n = pdfjsWebGenericL10n.GenericL10n;
+PDFJS.NullL10n = pdfjsWebUIUtils.NullL10n;
 
 exports.PDFJS = PDFJS;

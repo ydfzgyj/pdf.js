@@ -12,8 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/* globals Components, Services, XPCOMUtils, NetUtil, PrivateBrowsingUtils,
-           dump, NetworkManager, PdfJsTelemetry, PdfjsContentUtils */
 
 "use strict";
 
@@ -208,7 +206,7 @@ PdfDataListener.prototype = {
     if (this.errorCode) {
       value(null, this.errorCode);
     }
-  }
+  },
 };
 
 /**
@@ -223,7 +221,7 @@ class ChromeActions {
       firstPageInfo: false,
       streamTypesUsed: [],
       fontTypesUsed: [],
-      startAt: Date.now()
+      startAt: Date.now(),
     };
   }
 
@@ -311,7 +309,7 @@ class ChromeActions {
         onDataAvailable(aRequest, aContext, aDataInputStream, aOffset, aCount) {
           this.extListener.onDataAvailable(aRequest, aContext, aDataInputStream,
                                            aOffset, aCount);
-        }
+        },
       };
 
       channel.asyncOpen2(listener);
@@ -585,7 +583,7 @@ class RangedChromeActions extends ChromeActions {
           return;
         }
         this.headers[aHeader] = aValue;
-      }
+      },
     };
     if (originalRequest.visitRequestHeaders) {
       originalRequest.visitRequestHeaders(httpHeaderVisitor);
@@ -682,7 +680,7 @@ class RangedChromeActions extends ChromeActions {
           pdfjsLoadAction: "rangeProgress",
           loaded: evt.loaded,
         }, "*");
-      }
+      },
     });
   }
 
@@ -775,7 +773,8 @@ class RequestListener {
         response = function sendResponse(aResponse) {
           try {
             var listener = doc.createEvent("CustomEvent");
-            let detail = Cu.cloneInto({ response: aResponse }, doc.defaultView);
+            let detail = Cu.cloneInto({ response: aResponse, },
+                                      doc.defaultView);
             listener.initCustomEvent("pdf.js.response", true, false, detail);
             return message.dispatchEvent(listener);
           } catch (e) {
@@ -1008,19 +1007,11 @@ PdfStreamConverter.prototype = {
             domWindow.frameElement.className === "previewPluginContentFrame";
           PdfJsTelemetry.onEmbed(isObjectEmbed);
         }
-      }
+      },
     };
 
     // Keep the URL the same so the browser sees it as the same.
     channel.originalURI = aRequest.URI;
-//#if MOZCENTRAL
-    channel.loadInfo.resultPrincipalURI = aRequest.loadInfo.resultPrincipalURI;
-//#else
-    if ("resultPrincipalURI" in aRequest.loadInfo) {
-      channel.loadInfo.resultPrincipalURI =
-        aRequest.loadInfo.resultPrincipalURI;
-    }
-//#endif
     channel.loadGroup = aRequest.loadGroup;
     channel.loadInfo.originAttributes = aRequest.loadInfo.originAttributes;
 
@@ -1051,5 +1042,5 @@ PdfStreamConverter.prototype = {
     }
     delete this.dataListener;
     delete this.binaryStream;
-  }
+  },
 };

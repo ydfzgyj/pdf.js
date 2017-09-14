@@ -1,4 +1,4 @@
-/* Copyright 2012 Mozilla Foundation
+/* Copyright 2017 Mozilla Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,19 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/* globals module */
 
-'use strict';
-
-var fs = require('fs');
-
-function normalizeText(s) {
- return s.replace(/\r\n?/g, '\n').replace(/\uFEFF/g, '');
-}
-
-var args = process.argv.slice(2);
-
-args.forEach(function (file) {
-  var content = fs.readFileSync(file, 'utf8');
-  content = normalizeText(content);
-  fs.writeFileSync(file, content, 'utf8');
-});
+module.exports =
+  (typeof window !== 'undefined' && window.Math === Math) ? window :
+  // eslint-disable-next-line no-undef
+  (typeof global !== 'undefined' && global.Math === Math) ? global :
+  (typeof self !== 'undefined' && self.Math === Math) ? self : {};

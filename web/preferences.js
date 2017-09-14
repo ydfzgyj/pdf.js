@@ -57,7 +57,7 @@ class BasePreferences {
         value: Object.freeze(defaults),
         writable: false,
         enumerable: true,
-        configurable: false
+        configurable: false,
       });
 
       this.prefs = cloneObj(defaults);
@@ -141,7 +141,7 @@ class BasePreferences {
                           `expected a ${defaultType}.`);
         }
       } else {
-        if (valueType === 'number' && (value | 0) !== value) {
+        if (valueType === 'number' && !Number.isInteger(value)) {
           throw new Error(`Set preference: "${value}" must be an integer.`);
         }
       }

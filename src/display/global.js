@@ -23,12 +23,13 @@ import {
 } from './dom_utils';
 import {
   createBlob, createObjectURL, createPromiseCapability, deprecated,
-  getVerbosityLevel, globalScope, InvalidPDFException, isLittleEndian,
+  getVerbosityLevel, InvalidPDFException, isLittleEndian,
   MissingPDFException, OPS, PageViewport, PasswordException, PasswordResponses,
   removeNullCharacters, setVerbosityLevel, shadow, UnexpectedResponseException,
   UnknownErrorException, UNSUPPORTED_FEATURES, Util, VERBOSITY_LEVELS, warn
 } from '../shared/util';
 import { AnnotationLayer } from './annotation_layer';
+import globalScope from '../shared/global_scope';
 import { Metadata } from './metadata';
 import { renderTextLayer } from './text_layer';
 import { SVGGraphics } from './svg';
@@ -63,7 +64,7 @@ Object.defineProperty(PDFJS, 'verbosity', {
     setVerbosityLevel(level);
   },
   enumerable: true,
-  configurable: true
+  configurable: true,
 });
 
 PDFJS.VERBOSITY_LEVELS = VERBOSITY_LEVELS;
@@ -79,7 +80,7 @@ Object.defineProperty(PDFJS, 'isLittleEndian', {
   configurable: true,
   get: function PDFJS_isLittleEndian() {
     return shadow(PDFJS, 'isLittleEndian', isLittleEndian());
-  }
+  },
 });
 PDFJS.removeNullCharacters = removeNullCharacters;
 PDFJS.PasswordResponses = PasswordResponses;
@@ -266,7 +267,7 @@ if (typeof PDFJSDev === 'undefined' || !PDFJSDev.test('MOZCENTRAL')) {
       PDFJS.externalLinkTarget = value ? LinkTarget.BLANK : LinkTarget.NONE;
     },
     enumerable: true,
-    configurable: true
+    configurable: true,
   });
   if (savedOpenExternalLinksInNewWindow) {
     /**
