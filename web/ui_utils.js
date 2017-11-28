@@ -25,6 +25,13 @@ const MAX_AUTO_SCALE = 1.25;
 const SCROLLBAR_PADDING = 40;
 const VERTICAL_PADDING = 5;
 
+const PresentationModeState = {
+  UNKNOWN: 0,
+  NORMAL: 1,
+  CHANGING: 2,
+  FULLSCREEN: 3,
+};
+
 const RendererType = {
   CANVAS: 'canvas',
   SVG: 'svg',
@@ -45,6 +52,10 @@ function formatL10nValue(text, args) {
  * @implements {IL10n}
  */
 let NullL10n = {
+  getDirection() {
+    return Promise.resolve('ltr');
+  },
+
   get(property, args, fallback) {
     return Promise.resolve(formatL10nValue(fallback, args));
   },
@@ -90,12 +101,6 @@ PDFJS.disableHistory = (PDFJS.disableHistory === undefined ?
  */
 PDFJS.disableTextLayer = (PDFJS.disableTextLayer === undefined ?
                           false : PDFJS.disableTextLayer);
-
-/**
- * Disables maintaining the current position in the document when zooming.
- */
-PDFJS.ignoreCurrentPositionOnZoom = (PDFJS.ignoreCurrentPositionOnZoom ===
-  undefined ? false : PDFJS.ignoreCurrentPositionOnZoom);
 
 if (typeof PDFJSDev === 'undefined' ||
     !PDFJSDev.test('FIREFOX || MOZCENTRAL')) {
@@ -661,6 +666,7 @@ export {
   VERTICAL_PADDING,
   isValidRotation,
   cloneObj,
+  PresentationModeState,
   RendererType,
   mozL10n,
   NullL10n,

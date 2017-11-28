@@ -25,15 +25,14 @@ import {
 import { validateRangeRequestCapabilities } from './network_utils';
 
 class PDFNodeStream {
-  constructor(options) {
-    this.options = options;
-    this.source = options.source;
-    this.url = url.parse(this.source.url);
+  constructor(source) {
+    this.source = source;
+    this.url = url.parse(source.url);
     this.isHttp = this.url.protocol === 'http:' ||
                   this.url.protocol === 'https:';
     // Check if url refers to filesystem.
     this.isFsUrl = this.url.protocol === 'file:' || !this.url.host;
-    this.httpHeaders = (this.isHttp && this.source.httpHeaders) || {};
+    this.httpHeaders = (this.isHttp && source.httpHeaders) || {};
 
     this._fullRequest = null;
     this._rangeRequestReaders = [];
@@ -74,17 +73,18 @@ class BaseFullReader {
     this._errored = false;
     this._reason = null;
     this.onProgress = null;
-    this._contentLength = stream.source.length; // optional
+    let source = stream.source;
+    this._contentLength = source.length; // optional
     this._loaded = 0;
 
-    this._disableRange = stream.options.disableRange || false;
-    this._rangeChunkSize = stream.source.rangeChunkSize;
+    this._disableRange = source.disableRange || false;
+    this._rangeChunkSize = source.rangeChunkSize;
     if (!this._rangeChunkSize && !this._disableRange) {
       this._disableRange = true;
     }
 
-    this._isStreamingSupported = !stream.source.disableStream;
-    this._isRangeSupported = !stream.options.disableRange;
+    this._isStreamingSupported = !source.disableStream;
+    this._isRangeSupported = !source.disableRange;
 
     this._readableStream = null;
     this._readCapability = createPromiseCapability();
@@ -190,8 +190,8 @@ class BaseRangeReader {
     this._loaded = 0;
     this._readableStream = null;
     this._readCapability = createPromiseCapability();
-
-    this._isStreamingSupported = !stream.source.disableStream;
+    let source = stream.source;
+    this._isStreamingSupported = !source.disableStream;
   }
 
   get isStreamingSupported() {
@@ -303,11 +303,13 @@ class PDFNodeStreamFullReader extends BaseFullReader {
 
     this._request = null;
     if (this._url.protocol === 'http:') {
-      this._request = http.request(createRequestOptions(
-        this._url, stream.httpHeaders), handleResponse);
+      this._request = http.request(
+        createRequestOptions(this._url, stream.httpHeaders),
+        handleResponse);
     } else {
-      this._request = https.request(createRequestOptions(
-        this._url, stream.httpHeaders), handleResponse);
+      this._request = https.request(
+        createRequestOptions(this._url, stream.httpHeaders),
+        handleResponse);
     }
 
     this._request.on('error', (reason) => {
@@ -360,8 +362,9 @@ class PDFNodeStreamRangeReader extends BaseRangeReader {
 class PDFNodeStreamFsFullReader extends BaseFullReader {
   constructor(stream) {
     super(stream);
+    let path = decodeURI(this._url.path);
 
-    fs.lstat(this._url.path, (error, stat) => {
+    fs.lstat(path, (error, stat) => {
       if (error) {
         this._errored = true;
         this._reason = error;
@@ -371,7 +374,7 @@ class PDFNodeStreamFsFullReader extends BaseFullReader {
       // Setting right content length.
       this._contentLength = stat.size;
 
-      this._setReadableStream(fs.createReadStream(this._url.path));
+      this._setReadableStream(fs.createReadStream(path));
       this._headersCapability.resolve();
     });
   }
@@ -382,7 +385,7 @@ class PDFNodeStreamFsRangeReader extends BaseRangeReader {
     super(stream);
 
     this._setReadableStream(
-      fs.createReadStream(this._url.path, { start, end: end - 1, }));
+      fs.createReadStream(decodeURI(this._url.path), { start, end: end - 1, }));
   }
 }
 
